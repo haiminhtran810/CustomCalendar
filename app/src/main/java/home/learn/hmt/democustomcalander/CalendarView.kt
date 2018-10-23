@@ -1,17 +1,18 @@
 package home.learn.hmt.democustomcalander
 
 import android.content.Context
+import android.icu.util.ChineseCalendar
+import android.os.Build
+import android.support.annotation.RequiresApi
 import android.util.AttributeSet
-import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.AdapterView
-import android.widget.GridView
 import android.widget.LinearLayout
 import kotlinx.android.synthetic.main.control_calendar.view.*
 import java.lang.Exception
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.logging.SimpleFormatter
 
 class CalendarView : LinearLayout {
     private var inflater: LayoutInflater? = null
@@ -22,6 +23,7 @@ class CalendarView : LinearLayout {
     private val formattder = SimpleDateFormat("MMMM yyyy", Locale.ENGLISH)
     internal var rainbow = intArrayOf(R.color.summer, R.color.fall, R.color.winter, R.color.spring)
     internal var monthSeason = intArrayOf(2, 2, 3, 3, 3, 0, 0, 0, 1, 1, 1, 2)
+    private var eventHandler: EventHandler? = null
 
     constructor(context: Context?) : super(context)
 
@@ -42,6 +44,7 @@ class CalendarView : LinearLayout {
     First, we need to figure out what position the month starts at, then fill all the positions before that with the numbers from the previous month (30, 29, 28.. etc.) until we reach position 0.
     Then, we fill out the days for the current month (1, 2, 3… etc).
     After that come the days for the next month (again, 1, 2, 3.. etc), but this time we only fill the remaining positions in the last row(s) of the grid. */
+
     private fun initControl(context: Context?, attrs: AttributeSet) {
         inflater = context?.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         inflater?.inflate(R.layout.control_calendar, this)
@@ -63,10 +66,13 @@ class CalendarView : LinearLayout {
         }
     }
 
+
     fun updateCalendar() {
         try {
             var cells = ArrayList<Date>()
+            var lunaCells = ArrayList<Date>()
             var calendar = currentDate.clone() as Calendar
+            //var lunaCalendar = lunaDate.clone() as Calendar
 
             // determine the cell for current month's beginning
             calendar.set(Calendar.DAY_OF_MONTH, 1)
@@ -78,6 +84,11 @@ class CalendarView : LinearLayout {
                 cells.add(calendar.time)
                 calendar.add(Calendar.DAY_OF_MONTH + 1, 1)
             }
+
+            /*while (lunaCells.size < DAYS_COUNT) {
+                lunaCells.add(calendar.time)
+                lunaCalendar.add(ChineseCalendar.DAY_OF_MONTH + 1, 1)
+            }*/
             calendar_date_display.text = formattder.format(currentDate.time)
             calendar_grid.adapter = CalendarAdapter(context, cells)
             val sdf = SimpleDateFormat(dateFormat)
@@ -90,6 +101,7 @@ class CalendarView : LinearLayout {
         }
     }
 
+
     fun assignClickHandlers() {
         calendar_next_button.setOnClickListener {
             currentDate.add(Calendar.MONTH, 1)
@@ -101,13 +113,34 @@ class CalendarView : LinearLayout {
             updateCalendar()
         }
 
-        calendar_grid.onItemLongClickListener = AdapterView.OnItemLongClickListener { view, cell, position, id -> true }
+        calendar_grid.onItemClickListener = object : AdapterView.OnItemClickListener {
+            override fun onItemClick(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+                if (eventHandler == null) return
+                eventHandler?.onDayPress(p0?.getItemAtPosition(p2) as Date)
+            }
+        }
+
+        calendar_grid.setOnTouchListener(object : OnSwipeTouchListener(context) {
+            override fun onSwipeLeft() {
+                currentDate.add(Calendar.MONTH, 1)
+                updateCalendar()
+                super.onSwipeLeft()
+            }
+
+            override fun onSwipeRight() {
+                currentDate.add(Calendar.MONTH, -1)
+                updateCalendar()
+                super.onSwipeRight()
+            }
+        })
     }
 
     interface EventHandler {
-        fun onDayLongPress(date: Date)
+        fun onDayPress(date: Date)
+    }
 
-        fun setEvents()
+    fun setEventHandler(eventHandler: EventHandler) {
+        this.eventHandler = eventHandler
     }
 }
 

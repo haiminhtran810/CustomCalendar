@@ -2,6 +2,9 @@ package home.learn.hmt.democustomcalander
 
 import android.content.Context
 import android.graphics.Typeface
+import android.icu.util.ChineseCalendar
+import android.os.Build
+import android.support.annotation.RequiresApi
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,9 +22,11 @@ class CalendarAdapter : BaseAdapter {
         this.list = list
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
         val today = Date()
         val date = getItem(position)
+        val dateLuna = ChineseCalendar(date)
         val day = date.date
         val month = date.month
         val year = date.year
@@ -38,7 +43,7 @@ class CalendarAdapter : BaseAdapter {
             calendarLayout.txtCell.setTextColor(context!!.resources.getColor(R.color.today))
         }
 
-        calendarLayout.txtCell.text = date.date.toString()
+        calendarLayout.txtCell.text = dateLuna.time.date.toString()
 
         return calendarLayout
     }
